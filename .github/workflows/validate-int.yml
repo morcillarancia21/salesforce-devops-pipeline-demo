@@ -30,13 +30,21 @@ jobs:
 
       - name: Delta (PR base vs head)
         run: |
-          git fetch --depth=0 origin
+          # Traer refs remotas y limpiar lo viejo (sin depth inválido)
+          git fetch --all --prune
+
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
-          sfdx sgd:source:delta --to "origin/$HEAD" --from "origin/$BASE" --output "." --generate-delta
+
+          sfdx sgd:source:delta \
+            --to "origin/$HEAD" \
+            --from "origin/$BASE" \
+            --output "." \
+            --generate-delta
+
           if [ ! -f "manifest/package.xml" ]; then
-            echo "No hay cambios para desplegar"
+            echo "No hay cambios para validar en INT."
             exit 0
           fi
 
