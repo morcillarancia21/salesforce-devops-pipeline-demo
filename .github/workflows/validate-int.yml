@@ -1,5 +1,3 @@
-## Validate INT  
-
 name: Validate INT
 
 on:
@@ -11,14 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: docker://tiagofgh/my-sfdx-delta-cli:latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
       - name: Auth INT
-        env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
-        
+        env:
+          AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
         run: |
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
@@ -32,13 +32,13 @@ jobs:
           echo "Delta FROM=$BASE TO=$HEAD"
           sfdx sgd:source:delta --to "origin/$HEAD" --from "origin/$BASE" --output "." --generate-delta
           if [ ! -f manifest/package.xml ]; then
-            echo "No hay cambios para validar."
+            echo "No hay cambios para validar en INT."
             exit 0
           fi
-          sed -n '1,120p' manifest/package.xml || true
 
       - name: Validate in INT
-        env: { TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }} }
+        env:
+          TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
         run: |
           sf project deploy validate \
             --manifest manifest/package.xml \
