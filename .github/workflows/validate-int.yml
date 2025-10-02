@@ -18,7 +18,7 @@ jobs:
 
       - name: Fix Git safe directory
         run: |
-          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Auth INT
         env:
@@ -28,25 +28,27 @@ jobs:
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
           sf org display --target-org ORG-TEST
 
+      - name: SF version & plugins
+        run: |
+          sf --version
+          sf plugins
+
       - name: Delta (PR base vs head)
         run: |
-          # Traer refs remotas y limpiar lo viejo (sin depth inválido)
           git fetch --all --prune
-
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
-
-          sfdx sgd:source:delta \
+          sf sgd:source:delta \
             --to "origin/$HEAD" \
             --from "origin/$BASE" \
             --output "." \
             --generate-delta
-
           if [ ! -f "manifest/package.xml" ]; then
             echo "No hay cambios para validar en INT."
             exit 0
           fi
+          head -n 120 manifest/package.xml || true
 
       - name: Validate in INT
         env:
@@ -56,5 +58,5 @@ jobs:
             --manifest manifest/package.xml \
             --target-org ORG-TEST \
             --wait 10 \
-            --test-level $TESTLEVEL \
+            --test-level "$TESTLEVEL" \
             --verbose
