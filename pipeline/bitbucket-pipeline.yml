@@ -4,7 +4,7 @@ pipelines:
   pull-requests:
     "**":
       - step:
-          name: "Despliegue a INT"
+          name: "Deploy INT"
           options:
             max-time: 10
           script:
@@ -27,7 +27,7 @@ pipelines:
   branches:
     qa:
       - step:
-          name: "Despliegue a QA"
+          name: "Deploy QA"
           script:
             - echo "$AUTH_URL_QA" > authurl
             - sf org login sfdx-url -f authurl -s --alias ORG-QA
@@ -35,7 +35,7 @@ pipelines:
 
     uat:
       - step:
-          name: "Despliegue a UAT"
+          name: "Deploy UAT"
           script:
             - echo "$AUTH_URL_UAT" > authurl
             - sf org login sfdx-url -f authurl -s --alias ORG-UAT
