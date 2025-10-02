@@ -1,0 +1,50 @@
+image: tiagofgh/my-sfdx-delta-cli:latest
+
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: "Despliegue a INT"
+          options:
+            max-time: 10
+          script:
+            # 1) Autenticación
+            - echo "$AUTH_URL_INT" > authurl
+            - sf org login sfdx-url -f authurl -s --alias ORG-TEST
+            - sf org list
+            - sf org display --target-org ORG-TEST
+
+            # 2) Delta entre ramas (PR source vs Target)
+            - echo "Calculando delta entre $BITBUCKET_BRANCH y $BITBUCKET_PR_DESTINATION_BRANCH..."
+            - sf plugins install sfdx-git-delta || true
+            - sfdx sgd:source:delta --to "origin/$BITBUCKET_BRANCH" --from "origin/$BITBUCKET_PR_DESTINATION_BRANCH" --output "." --generate-delta
+            - if [ ! -f "manifest/package.xml" ]; then echo "No hay cambios para desplegar"; exit 0; fi
+            - cat manifest/package.xml
+
+            # 3) Validación (no impacta PROD)
+            - sf project deploy validate --manifest manifest/package.xml --target-org ORG-TEST --wait 10 --test-level $TESTLEVEL --verbose
+
+  branches:
+    qa:
+      - step:
+          name: "Despliegue a QA"
+          script:
+            - echo "$AUTH_URL_QA" > authurl
+            - sf org login sfdx-url -f authurl -s --alias ORG-QA
+            - sf project deploy start --manifest manifest/package.xml --target-org ORG-QA --wait 10 --test-level $TESTLEVEL --verbose
+
+    uat:
+      - step:
+          name: "Despliegue a UAT"
+          script:
+            - echo "$AUTH_URL_UAT" > authurl
+            - sf org login sfdx-url -f authurl -s --alias ORG-UAT
+            - sf project deploy start --manifest manifest/package.xml --target-org ORG-UAT --wait 10 --test-level $TESTLEVEL --verbose
+
+    # main:
+    #   - step:
+    #       name: "Despliegue a PROD"
+    #       script:
+    #         - echo "$AUTH_URL_PROD" > authurl
+    #         - sf org login sfdx-url -f authurl -s --alias ORG-PROD
+    #         - sf project deploy start --manifest manifest/package.xml --target-org ORG-PROD --wait 10 --test-level RunLocalTests --verbose
