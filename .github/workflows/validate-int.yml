@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
-      - name: Auth INT (Trailhead)
+      - name: Auth INT
         env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
         run: |
           echo "$AUTH_URL_INT" > authurl
