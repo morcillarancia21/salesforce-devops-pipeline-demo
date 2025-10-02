@@ -18,6 +18,7 @@ jobs:
 
       - name: Auth INT
         env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
+        
         run: |
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
