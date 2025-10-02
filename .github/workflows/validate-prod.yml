@@ -1,0 +1,44 @@
+name: Deploy PROD
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_branch:
+        description: "Rama base para delta (ej. 'uat')"
+        required: true
+        default: "uat"
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    container:
+      image: docker://tiagofgh/my-sfdx-delta-cli:latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Auth PROD
+        env: { AUTH_URL_PROD: ${{ secrets.AUTH_URL_PROD }} }
+        run: |
+          echo "$AUTH_URL_PROD" > authurl
+          sf org login sfdx-url -f authurl -s --alias ORG-PROD
+
+      - name: Delta (${{ github.event.inputs.from_branch }} → main HEAD)
+        run: |
+          git fetch --depth=0 origin
+          FROM="origin/${{ github.event.inputs.from_branch }}"
+          sfdx sgd:source:delta --to "HEAD" --from "$FROM" --output "." --generate-delta
+          if [ ! -f manifest/package.xml ]; then
+            echo "No hay cambios para desplegar a PROD."
+            exit 0
+          fi
+
+      - name: Deploy to PROD
+        env: { TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }} }
+        run: |
+          sf project deploy start \
+            --manifest manifest/package.xml \
+            --target-org ORG-PROD \
+            --wait 10 \
+            --test-level "$TESTLEVEL" \
+            --verbose

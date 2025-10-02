@@ -1,26 +1,23 @@
-name: Validate INT (Salesforce)
+## Validate INT  
+
+name: Validate INT
 
 on:
-  workflow_dispatch:        
-  pull_request: # se acciona en cada PR
+  workflow_dispatch:
+  pull_request:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-
-    # Reutilizacion de imagen
     container:
       image: docker://tiagofgh/my-sfdx-delta-cli:latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # llenar con historico para calcular delta
+        with: { fetch-depth: 0 }
 
-      - name: Auth INT (Trailhead playground)
-        env:
-          AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
+      - name: Auth INT (Trailhead)
+        env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
         run: |
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
@@ -31,24 +28,16 @@ jobs:
           git fetch --depth=0 origin
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
-          echo "Calculando delta FROM=$BASE TO=$HEAD"
-          sfdx sgd:source:delta \
-            --to "origin/$HEAD" \
-            --from "origin/$BASE" \
-            --output "." \
-            --generate-delta
-          if [ -f manifest/package.xml ]; then
-            echo "Delta generado:"
-            sed -n '1,120p' manifest/package.xml || true
-          else
-            echo "No hay cambios para desplegar (no se generó manifest/package.xml)."
-            # Salimos con éxito para no bloquear el PR si no hay cambios
+          echo "Delta FROM=$BASE TO=$HEAD"
+          sfdx sgd:source:delta --to "origin/$HEAD" --from "origin/$BASE" --output "." --generate-delta
+          if [ ! -f manifest/package.xml ]; then
+            echo "No hay cambios para validar."
             exit 0
           fi
+          sed -n '1,120p' manifest/package.xml || true
 
       - name: Validate in INT
-        env:
-          TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
+        env: { TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }} }
         run: |
           sf project deploy validate \
             --manifest manifest/package.xml \

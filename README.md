@@ -1,6 +1,6 @@
 # Salesforce DevOps CI/CD Pipeline (Demo)
 
-Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce** usando **GitLab CI** y **Bitbucket Pipelines**.
+Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce** usando **Bitbucket CI** y **Bitbucket Pipelines**.
 
 ## Características principales
 - Autenticación con JWT (sin credenciales planas).
@@ -11,18 +11,19 @@ Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce
 
 ## Tecnologías
 - Salesforce CLI (sfdx / sf)
-- GitLab CI
+- Bitbucket CI
 - Bitbucket Pipelines
 - Docker (imagen personalizada con plugins)
 
 ## Flujo
 ```mermaid
 flowchart LR
-A[Developer Push] --> B[Pipeline Trigger]
-B --> C[Validate in INT Org]
-C --> D[Delta Deploy Package]
-D --> E[Deploy to Target Org]
-E --> F[Slack Notification]
+  A[Developer Push] --> B[Pipeline Trigger]
+  B --> C[Validate in INT Org]
+  C --> D[Delta Deploy Package]
+  D --> E[Deploy to Target Org]
+  E --> F[Slack Notification]
+
 
 ## GitHub Actions (opcional)
 Este repo también incluye un workflow de GitHub Actions que reutiliza mi imagen Docker para validar cambios en INT:
