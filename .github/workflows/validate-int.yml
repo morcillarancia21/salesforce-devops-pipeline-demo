@@ -16,6 +16,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fix Git safe directory
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+
       - name: Auth INT
         env:
           AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
@@ -31,8 +35,8 @@ jobs:
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
           sfdx sgd:source:delta --to "origin/$HEAD" --from "origin/$BASE" --output "." --generate-delta
-          if [ ! -f manifest/package.xml ]; then
-            echo "No hay cambios para validar en INT."
+          if [ ! -f "manifest/package.xml" ]; then
+            echo "⚠️ No hay cambios para desplegar"
             exit 0
           fi
 
@@ -44,5 +48,5 @@ jobs:
             --manifest manifest/package.xml \
             --target-org ORG-TEST \
             --wait 10 \
-            --test-level "$TESTLEVEL" \
+            --test-level $TESTLEVEL \
             --verbose
