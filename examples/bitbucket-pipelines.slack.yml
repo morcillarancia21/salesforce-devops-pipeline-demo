@@ -1,0 +1,37 @@
+image: tiagofgh/my-sfdx-delta-cli:latest
+
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: "INT + Slack"
+          script:
+            # --- Auth INT  ---
+            - echo "$AUTH_URL_INT" > authurl
+            - sf org login sfdx-url -f authurl -s --alias ORG-TEST
+
+            # --- Delta ---
+            - git fetch --all --prune
+            - sfdx sgd:source:delta \
+                --to "origin/$BITBUCKET_BRANCH" \
+                --from "origin/$BITBUCKET_PR_DESTINATION_BRANCH" \
+                --output "." --generate-delta
+
+            # --- Validate (si existe cambios) ---
+            - if [ -f manifest/package.xml ]; then
+                sf project deploy validate --manifest manifest/package.xml \
+                  --target-org ORG-TEST --wait 10 --test-level ${TESTLEVEL:-RunLocalTests} --verbose;
+                CODE=$?;
+              else
+                echo "No hay cambios para validar";
+                CODE=0;
+              fi
+
+            # --- Slack notification (webhook en variable segura SLACK_WEBHOOK_URL) ---
+            - |
+              MSG="[$BITBUCKET_REPO_FULL_NAME:$BITBUCKET_BRANCH] validate exit=$CODE"
+              payload=$(printf '{"text":"%s"}' "$MSG")
+              curl -s -X POST -H 'Content-type: application/json' \
+                --data "$payload" "$SLACK_WEBHOOK_URL" || true
+
+            - exit $CODE
