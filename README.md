@@ -1,6 +1,7 @@
 # Salesforce DevOps CI/CD Pipeline (Demo)
+![Validate INT](https://github.com/morcillarancia21/salesforce-devops-pipeline-demo/actions/workflows/validate-int.yml/badge.svg)
 
-Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce** usando **Bitbucket CI** y **Bitbucket Pipelines**.
+Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce** usando **GitHub Actions**.
 
 ## Características principales
 - Autenticación con JWT (sin credenciales planas).
@@ -11,8 +12,7 @@ Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce
 
 ## Tecnologías
 - Salesforce CLI (sfdx / sf)
-- Bitbucket CI
-- Bitbucket Pipelines
+- GitHub Actions
 - Docker (imagen personalizada con plugins)
 
 ## Flujo
@@ -25,11 +25,6 @@ flowchart LR
   E --> F[Slack Notification]
 
 
-## GitHub Actions (opcional)
-Este repo también incluye un workflow de GitHub Actions que reutiliza mi imagen Docker para validar cambios en INT:
-- Archivo: .github/workflows/validate-int.yml
-- Secrets requeridos: AUTH_URL_INT / OPCIONAL TEST_LEVEL
-
 ## Tips y troubleshooting
 “No hay cambios para desplegar”: Es normal si el delta no produjo manifest/package.xml (por ejemplo, cambios fuera de metadatos). 
 El workflow termina OK.
@@ -37,6 +32,5 @@ El workflow termina OK.
 Delta exacto: si usás estrategia distinta de ramas, ajusta:
 BASE="otra_rama_base" y HEAD="HEAD", o
 usar git merge-base si querés precisión absoluta entre commits.
-Errores de auth: re-genera tu Auth URL (TPs expiran si se borran/rotan).
 
 Runner en contenedor: Cualquier paso que uses tendra sf y sfdx-git-delta porque vienen en la imagen.
