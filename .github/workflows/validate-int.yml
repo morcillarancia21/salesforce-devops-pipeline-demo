@@ -26,24 +26,15 @@ jobs:
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
           sf org display --target-org ORG-TEST
-
       - name: Delta (PR base vs head)
         run: |
           git fetch --all --prune
-
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
-
-          # Sintaxis correcta del plugin (con ESPACIOS)
-          sf sgd source delta \
-            --to "origin/$HEAD" \
-            --from "origin/$BASE" \
-            --output "." \
-            --generate-delta
-
-          if [ ! -f manifest/package.xml ]; then
-            echo "No hay cambios para validar en INT."
+          sf sgd:source:delta --to "origin/$HEAD" --from "origin/$BASE" --output "." --generate-delta
+          if [ ! -f "manifest/package.xml" ]; then
+            echo "No hay cambios para desplegar"
             exit 0
           fi
           head -n 120 manifest/package.xml || true
