@@ -8,45 +8,34 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     container:
-      image: docker://tiagofgh/my-sfdx-delta-cli:latest   # o tu tag v1.0.x que sí exista
-
+      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.9
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Fix Git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: SF version (debug)
-        run: sf --version
-
-      # Airbag: instala el plugin si no está (amd64) y valida el comando
-      - name: Ensure sfdx-git-delta is present
         run: |
-          set -e
-          sf plugins || true
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-          if ! sf help sgd:source:delta >/dev/null 2>&1; then
-            echo "Installing sfdx-git-delta…"
-            # intenta vía sf; si no, fallback a npm global
-            yes | sf plugins install sfdx-git-delta --force || npm install -g sfdx-git-delta
-          fi
-
-          echo "Verifying plugin…"
-          sf help sgd:source:delta >/dev/null 2>&1
+      # 1) Debug plugins
+      - name: SF version & plugins (debug)
+        run: |
+          sf --version
           sf plugins
+          sf help sgd:source:delta | head -n 5 || true
 
+      # 2) Auth
       - name: Auth INT
-        env:
-          AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
+        env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
         run: |
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
           sf org display --target-org ORG-TEST
 
+      # 3) DELTA (PR base vs head)
       - name: Delta (PR base vs head)
+        shell: bash
         run: |
           set -e
           git fetch --all --prune
@@ -54,26 +43,27 @@ jobs:
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
 
-          # Sintaxis correcta (con DOS PUNTOS)
-          sf sgd:source:delta \
-            --to "origin/$HEAD" \
+          # OJO: usar --output-dir (no --output) y mantener "."
+          sf sgd source delta \
             --from "origin/$BASE" \
-            --output "." \
+            --to   "origin/$HEAD" \
+            --output-dir "." \
             --generate-delta
 
-          if [ ! -f manifest/package.xml ]; then
+          if [ ! -f "manifest/package.xml" ]; then
             echo "No hay cambios para validar en INT."
             exit 0
           fi
-          head -n 100 manifest/package.xml || true
+          echo "Manifest encontrado: manifest/package.xml"
 
-      - name: Validate in INT
+      # 4) VALIDAR usando MDAPI (no project deploy)
+      - name: Validate in INT (MDAPI)
         env:
           TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
         run: |
-          sf project deploy validate \
+          sf deploy metadata validate \
             --manifest manifest/package.xml \
             --target-org ORG-TEST \
-            --wait 10 \
+            --wait 30 \
             --test-level "$TESTLEVEL" \
             --verbose
