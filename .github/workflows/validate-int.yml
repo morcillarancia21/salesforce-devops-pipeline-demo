@@ -50,10 +50,6 @@ jobs:
           fi
           head -n 100 manifest/package.xml || true
           - name: SF version & plugins (debug)
-        run: |
-          sf --version
-          sf plugins
-          sf help sgd:source:delta || true
 
 
       - name: Validate in INT
