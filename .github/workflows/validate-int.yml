@@ -33,6 +33,22 @@ jobs:
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
           sf org display --target-org ORG-TEST
 
+      - name: Ensure sfdx-git-delta is present
+        run: |
+          set -e
+          sf plugins || true
+            if ! sf help sgd:source:delta >/dev/null 2>&1; then
+              echo "Installing sfdx-git-delta…"
+              yes | sf plugins install sfdx-git-delta --force || npm install -g sfdx-git-delta
+            fi
+          echo "Verifying…"
+            sf plugins
+            sf help sgd:source:delta >/dev/null 2>&1 || { echo "Plugin still missing"; exit 1; }
+  
+      
+      
+      
+      
       - name: Delta (PR base vs head)
         run: |
           git fetch --all --prune
@@ -52,7 +68,7 @@ jobs:
           - name: SF version & plugins (debug)
 
 
-      - name: Validate in INT
+      - name: Validate INT
         env:
           TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
         run: |
