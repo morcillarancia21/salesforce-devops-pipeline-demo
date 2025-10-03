@@ -8,7 +8,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     container:
-      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.8
+      image: docker://tiagofgh/my-sfdx-delta-cli:latest   # o tu tag v1.0.x que sí exista
 
     steps:
       - name: Checkout
@@ -19,11 +19,24 @@ jobs:
       - name: Fix Git safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: SF version & plugins (debug)
+      - name: SF version (debug)
+        run: sf --version
+
+      # Airbag: instala el plugin si no está (amd64) y valida el comando
+      - name: Ensure sfdx-git-delta is present
         run: |
-          sf --version
+          set -e
+          sf plugins || true
+
+          if ! sf help sgd:source:delta >/dev/null 2>&1; then
+            echo "Installing sfdx-git-delta…"
+            # intenta vía sf; si no, fallback a npm global
+            yes | sf plugins install sfdx-git-delta --force || npm install -g sfdx-git-delta
+          fi
+
+          echo "Verifying plugin…"
+          sf help sgd:source:delta >/dev/null 2>&1
           sf plugins
-          sf help sgd:source:delta
 
       - name: Auth INT
         env:
@@ -33,42 +46,28 @@ jobs:
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
           sf org display --target-org ORG-TEST
 
-      - name: Ensure sfdx-git-delta is present
-        run: |
-          set -e
-          sf plugins || true
-            if ! sf help sgd:source:delta >/dev/null 2>&1; then
-              echo "Installing sfdx-git-delta…"
-              yes | sf plugins install sfdx-git-delta --force || npm install -g sfdx-git-delta
-            fi
-          echo "Verifying…"
-            sf plugins
-            sf help sgd:source:delta >/dev/null 2>&1 || { echo "Plugin still missing"; exit 1; }
-  
-      
-      
-      
-      
       - name: Delta (PR base vs head)
         run: |
+          set -e
           git fetch --all --prune
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
+
+          # Sintaxis correcta (con DOS PUNTOS)
           sf sgd:source:delta \
             --to "origin/$HEAD" \
             --from "origin/$BASE" \
             --output "." \
             --generate-delta
+
           if [ ! -f manifest/package.xml ]; then
             echo "No hay cambios para validar en INT."
             exit 0
           fi
           head -n 100 manifest/package.xml || true
-          - name: SF version & plugins (debug)
 
-
-      - name: Validate INT
+      - name: Validate in INT
         env:
           TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
         run: |
