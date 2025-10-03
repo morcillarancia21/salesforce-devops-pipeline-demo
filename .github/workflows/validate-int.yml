@@ -8,7 +8,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     container:
-      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.5
+      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.6
 
     steps:
       - name: Checkout
@@ -39,18 +39,22 @@ jobs:
           BASE="${{ github.base_ref || 'main' }}"
           HEAD="${{ github.head_ref || github.ref_name }}"
           echo "Delta FROM=$BASE TO=$HEAD"
-          # COMANDO CORRECTO (con DOS PUNTOS)
           sf sgd:source:delta \
             --to "origin/$HEAD" \
             --from "origin/$BASE" \
             --output "." \
             --generate-delta
-
           if [ ! -f manifest/package.xml ]; then
             echo "No hay cambios para validar en INT."
             exit 0
           fi
           head -n 100 manifest/package.xml || true
+          - name: SF version & plugins (debug)
+        run: |
+          sf --version
+          sf plugins
+          sf help sgd:source:delta || true
+
 
       - name: Validate in INT
         env:
