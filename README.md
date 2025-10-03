@@ -1,36 +1,18 @@
-# Salesforce DevOps CI/CD Pipeline (Demo)
-![Validate INT](https://github.com/morcillarancia21/salesforce-devops-pipeline-demo/actions/workflows/validate-int.yml/badge.svg)
+# Salesforce DX Project: Next Steps
 
-Este proyecto muestra cómo diseñé y automatizé un pipeline para **Salesforce** usando **GitHub Actions**.
+Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
 
-## Características principales
-- Autenticación con JWT (sin credenciales planas).
-- Despliegues DELTA (solo cambios entre ramas).
-- Validación en orgs de integración antes de merge.
-- Notificación en SLACK al final del pipeline.
-- Branch strategy por ambiente (INT,QA, UAT, PROD).
+## How Do You Plan to Deploy Your Changes?
 
-## Tecnologías
-- Salesforce CLI (sfdx / sf)
-- GitHub Actions
-- Docker (imagen personalizada con plugins)
+Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
 
-## Flujo
-```mermaid
-flowchart LR
-  A[Developer Push] --> B[Pipeline Trigger]
-  B --> C[Validate in INT Org]
-  C --> D[Delta Deploy Package]
-  D --> E[Deploy to Target Org]
-  E --> F[Slack Notification]
+## Configure Your Salesforce DX Project
 
+The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
 
-## Tips y troubleshooting
-“No hay cambios para desplegar”: Es normal si el delta no produjo manifest/package.xml (por ejemplo, cambios fuera de metadatos). 
-El workflow termina OK.
+## Read All About It
 
-Delta exacto: si usás estrategia distinta de ramas, ajusta:
-BASE="otra_rama_base" y HEAD="HEAD", o
-usar git merge-base si querés precisión absoluta entre commits.
-
-Runner en contenedor: Cualquier paso que uses tendra sf y sfdx-git-delta porque vienen en la imagen.
+- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
+- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
+- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
