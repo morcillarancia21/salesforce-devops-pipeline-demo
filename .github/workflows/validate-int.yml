@@ -44,7 +44,7 @@ jobs:
           echo "Delta FROM=$BASE TO=$HEAD"
 
           # OJO: usar --output-dir (no --output) y mantener "."
-          sf sgd source delta \
+          sf sgd:source delta \
             --from "origin/$BASE" \
             --to   "origin/$HEAD" \
             --output-dir "." \
