@@ -1,3 +1,11 @@
+name: Validate INT
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [ main ]
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -6,10 +14,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
       - name: Fix Git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: SF version & plugins (debug)
         run: |
@@ -18,7 +28,8 @@ jobs:
           sf help sgd:source:delta | head -n 5 || true
 
       - name: Auth INT
-        env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
+        env:
+          AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
         run: |
           echo "$AUTH_URL_INT" > authurl
           sf org login sfdx-url -f authurl -s --alias ORG-TEST
@@ -43,6 +54,7 @@ jobs:
             echo "No hay cambios para validar en INT."
             exit 0
           fi
+          echo "Manifest encontrado: manifest/package.xml"
 
       - name: Validate in INT (MDAPI)
         env:
