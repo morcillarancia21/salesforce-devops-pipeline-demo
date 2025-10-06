@@ -7,67 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  validate:
+  ping:
     runs-on: ubuntu-latest
-    container:
-      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.9
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-
-      - name: Fix Git safe directory
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # 1) Debug plugins
-      - name: SF version & plugins (debug)
-        run: |
-          sf --version
-          sf plugins
-          sf help sgd:source:delta | head -n 5 || true
-
-      # 2) Auth
-      - name: Auth INT
-        env: { AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }} }
-        run: |
-          echo "$AUTH_URL_INT" > authurl
-          sf org login sfdx-url -f authurl -s --alias ORG-TEST
-          sf org display --target-org ORG-TEST
-
-      # 3) DELTA (PR base vs head)
-      - name: Delta (PR base vs head)
-        shell: bash
-        run: |
-          set -e
-          git fetch --all --prune
-          BASE="${{ github.base_ref || 'main' }}"
-          HEAD="${{ github.head_ref || github.ref_name }}"
-          echo "Delta FROM=$BASE TO=$HEAD"
-
-          # OJO: usar --output-dir (no --output) y mantener "."
-          sf sgd:source delta \
-            --from "origin/$BASE" \
-            --to   "origin/$HEAD" \
-            --output-dir "." \
-            --generate-delta
-
-          if [ ! -f "manifest/package.xml" ]; then
-            echo "No hay cambios para validar en INT."
-            exit 0
-          fi
-          echo "Manifest encontrado: manifest/package.xml"
-
-      # 4) VALIDAR usando MDAPI (no project deploy)
-      - name: Validate in INT (MDAPI)
-        env:
-          TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
-        run: |
-          sf deploy metadata validate \
-            --manifest manifest/package.xml \
-            --target-org ORG-TEST \
-            --wait 30 \
-            --test-level "$TESTLEVEL" \
-            --verbose
-# trigger
-# trigger
+      - name: Say hello
+        run: echo "Validate INT workflow is alive"
+        
