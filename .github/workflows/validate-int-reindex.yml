@@ -1,0 +1,8 @@
+name: Validate INT (reindex)
+on:
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "GHA index OK"
