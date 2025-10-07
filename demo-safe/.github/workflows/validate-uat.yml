@@ -1,0 +1,40 @@
+name: Deploy UAT
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "uat" ]
+
+jobs:
+  deploy-uat:
+    runs-on: ubuntu-latest
+    container:
+      image: docker://tiagofgh/my-sfdx-delta-cli:latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Auth UAT
+        env: { AUTH_URL_UAT: ${{ secrets.AUTH_URL_UAT }} }
+        run: |
+          echo "$AUTH_URL_UAT" > authurl
+          sf org login sfdx-url -f authurl -s --alias ORG-UAT
+
+      - name: Delta (qa → uat)
+        run: |
+          git fetch --depth=0 origin
+          sfdx sgd:source:delta --to "HEAD" --from "origin/qa" --output "." --generate-delta
+          if [ ! -f manifest/package.xml ]; then
+            echo "No hay cambios para desplegar a UAT."
+            exit 0
+          fi
+
+      - name: Deploy to UAT
+        env: { TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }} }
+        run: |
+          sf project deploy start \
+            --manifest manifest/package.xml \
+            --target-org ORG-UAT \
+            --wait 10 \
+            --test-level "$TESTLEVEL" \
+            --verbose

@@ -1,0 +1,83 @@
+name: Validate INT
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container:
+      image: docker://tiagofgh/my-sfdx-delta-cli:v1.0.9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix Git safe directory
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Solo debug: ver versión de SF CLI
+      - name: SF version & plugins (debug)
+        run: |
+          sf --version
+          sf plugins || true
+          sf help sgd:source:delta | head -n 5 || true
+
+      # Autocuración: si el plugin no está, instálalo
+      - name: Ensure sfdx-git-delta present (self-heal)
+        run: |
+          if ! sf plugins | grep -qi 'sfdx-git-delta'; then
+            echo "sfdx-git-delta missing -> installing..."
+            sf plugins install sfdx-git-delta --force
+            sf plugins
+          fi
+
+      # Login con URL segura del entorno INT (secreto: AUTH_URL_INT)
+      - name: Auth INT
+        env:
+          AUTH_URL_INT: ${{ secrets.AUTH_URL_INT }}
+        run: |
+          echo "$AUTH_URL_INT" > authurl
+          sf org login sfdx-url -f authurl -s --alias ORG-TEST
+          sf org display --target-org ORG-TEST
+
+      # Calcular delta entre la base y la cabeza del PR (o rama main en push)
+      - name: Delta (PR base vs head)
+        shell: bash
+        run: |
+          set -e
+          git fetch --all --prune
+
+          BASE="${{ github.base_ref || 'main' }}"
+          HEAD="${{ github.head_ref || github.ref_name }}"
+          echo "Delta FROM=$BASE TO=$HEAD"
+
+          # Nota: usar --output-dir (no --output)
+          sf sgd source delta \
+            --from "origin/$BASE" \
+            --to   "origin/$HEAD" \
+            --output-dir "." \
+            --generate-delta
+
+          if [ ! -f "manifest/package.xml" ]; then
+            echo "No hay cambios para validar en INT."
+            exit 0
+          fi
+          echo "Manifest encontrado: manifest/package.xml"
+
+      # Validación MDAPI contra INT
+      - name: Validate in INT (MDAPI)
+        env:
+          TESTLEVEL: ${{ secrets.TESTLEVEL || 'RunLocalTests' }}
+        run: |
+          sf deploy metadata validate \
+            --manifest manifest/package.xml \
+            --target-org ORG-TEST \
+            --wait 30 \
+            --test-level "$TESTLEVEL" \
+            --verbose
